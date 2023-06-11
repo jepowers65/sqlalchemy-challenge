@@ -43,24 +43,23 @@ app = Flask(__name__)
 @app.route("/")
 def welcome():
     return(
-    '''
-    Welcome to the Climate Analysis API! </br>
-    Available Routes: <br/>
-    /api/v1.0/precipitation <br/>
-    /api/v1.0/stations <br/>
-    /api/v1.0/tobs <br/>
-    /api/v1.0/temp/start/end <br/>
-    ''')
+    f"Available Routes:<br/>"
+        f"/api/v1.0/precipitation<br/>"
+        f"/api/v1.0/stations<br/>"
+        f"/api/v1.0/tobs<br/>"
+        f"/api/v1.0/[start_date format:yyyy-mm-dd]<br/>"
+        f"/api/v1.0/[start_date format:yyyy-mm-dd]/[end_date format:yyyy-mm-dd]<br/>"
+    )
 
 # Define the preciptation route
 @app.route("/api/v1.0/precipitation")
 
 def precipitation():
-    last_date = session.query(Measurement.date).order_by(Measurement.date.desc()).first()[0]
-    prev_year = dt.date(last_date, "%m-%d-%Y") - dt.timedelta(days=365)
+    prev_year = dt.date(2017,8,23) - dt.timedelta(days=365)
     precipitation = session.query(Measurement.date, Measurement.prcp).\
         filter(Measurement.date >= prev_year).all()
     precip = {date: prcp for date, prcp in precipitation}
+
     return jsonify(precip)
 
 # Define the stations route
@@ -69,18 +68,19 @@ def precipitation():
 def stations():
     results = session.query(Station.station).all()
     stations = list(np.ravel(results))
+    
     return jsonify(stations)
 
 # Define the temperature observations route
 @app.route('/api/v1.0/tobs')
 
 def tobs():
-    last_date = session.query(Measurement.date).order_by(Measurement.date.desc()).first()[0]
-    prev_year = dt.date(last_date, "%m-%d-%Y") - dt.timedelta(days=365)
+    prev_year = dt.date(2017,8,23) - dt.timedelta(days=365)
 
     results = session.query(Measurement.date, Measurement.tobs).\
         filter(Measurement.station == 'USC00519281').\
         filter(Measurement.date >= prev_year).all()
+    
     
     tobs_list = []
     for date, tobs in results:
@@ -91,19 +91,45 @@ def tobs():
     
     return jsonify(tobs_list)
 
-# Define the start and start-end range route
-@app.route("/api/v1.0/<start>")
-@app.route("/api/v1.0/<start>/<end>")
-def start_end(start, end=None):
-    if end:
-        results = session.query(func.min(Measurement.tobs), func.avg(Measurement.tobs), func.max(Measurement.tobs)).\
-            filter(Measurement.date >= start).filter(Measurement.date <= end).all()
-    else:
-        results = session.query(func.min(Measurement.tobs), func.avg(Measurement.tobs), func.max(Measurement.tobs)).\
-            filter(Measurement.date >= start).all()
-        start_end_data = list(np.ravel(results))
+# Define the start range route
+@app.route("/api/v1.0/<start_date>")
+def Start_date(start_date):
+      
+    results = session.query(func.min(Measurement.tobs), func.avg(Measurement.tobs), func.max(Measurement.tobs)).\
+                filter(Measurement.date >= start_date).all()
+
+   
+    # Create a dictionary from the row data and append to a list of start_date_tobs
+    start_date_tobs = []
+    for min, avg, max in results:
+        start_date_tobs_dict = {}
+        start_date_tobs_dict["TMIN"] = min
+        start_date_tobs_dict["TAVG"] = avg
+        start_date_tobs_dict["TMAX"] = max
+        start_date_tobs.append(start_date_tobs_dict) 
+    return jsonify(start_date_tobs)
+
+# Define the start and end range route
+@app.route("/api/v1.0/<start_date>/<end_date>")
+def Start_end_date(start_date, end_date):
+   
+    results = session.query(func.min(Measurement.tobs), func.avg(Measurement.tobs), func.max(Measurement.tobs)).\
+                filter(Measurement.date >= start_date).filter(Measurement.date <= end_date).all()
+ 
+    # Create a dictionary from the row data and append to a list of start_end_date_tobs
+    start_end_tobs = []
+    for min, avg, max in results:
+        start_end_tobs_dict = {}
+        start_end_tobs_dict["TMIN"] = min
+        start_end_tobs_dict["TAVG"] = avg
+        start_end_tobs_dict["TMAX"] = max
+        start_end_tobs.append(start_end_tobs_dict) 
     
-    return jsonify(start_end_data)
+
+    return jsonify(start_end_tobs)
+
+session.close()
+
 
 if __name__ == "__main__":
     app.run(debug=True)
