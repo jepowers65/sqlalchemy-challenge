@@ -44,49 +44,66 @@ app = Flask(__name__)
 def welcome():
     return(
     '''
-    Welcome to the Climate Analysis API!
-    Available Routes:
-    /api/v1.0/precipitation
-    /api/v1.0/stations
-    /api/v1.0/tobs
-    /api/v1.0/temp/start/end
+    Welcome to the Climate Analysis API! </br>
+    Available Routes: <br/>
+    /api/v1.0/precipitation <br/>
+    /api/v1.0/stations <br/>
+    /api/v1.0/tobs <br/>
+    /api/v1.0/temp/start/end <br/>
     ''')
+
+# Define the preciptation route
 @app.route("/api/v1.0/precipitation")
+
 def precipitation():
-    prev_year = dt.date(2017, 8, 23) - dt.timedelta(days=365)
+    last_date = session.query(Measurement.date).order_by(Measurement.date.desc()).first()[0]
+    prev_year = dt.date(last_date, "%m-%d-%Y") - dt.timedelta(days=365)
     precipitation = session.query(Measurement.date, Measurement.prcp).\
         filter(Measurement.date >= prev_year).all()
     precip = {date: prcp for date, prcp in precipitation}
     return jsonify(precip)
 
-@app.route("/api/v1.0/stations")
+# Define the stations route
+@app.route('/api/v1.0/stations')
+
 def stations():
     results = session.query(Station.station).all()
     stations = list(np.ravel(results))
-    return jsonify(stations=stations)
+    return jsonify(stations)
 
-@app.route("/api/v1.0/tobs")
-def temp_monthly():
-    prev_year = dt.date(2017, 8, 23) - dt.timedelta(days=365)
-    results = session.query(Measurement.tobs).\
+# Define the temperature observations route
+@app.route('/api/v1.0/tobs')
+
+def tobs():
+    last_date = session.query(Measurement.date).order_by(Measurement.date.desc()).first()[0]
+    prev_year = dt.date(last_date, "%m-%d-%Y") - dt.timedelta(days=365)
+
+    results = session.query(Measurement.date, Measurement.tobs).\
         filter(Measurement.station == 'USC00519281').\
         filter(Measurement.date >= prev_year).all()
-    temps = list(np.ravel(results))
-    return jsonify(temps=temps)
+    
+    tobs_list = []
+    for date, tobs in results:
+        tobs_dict = {}
+        tobs_dict["date"] = date
+        tobs_dict["tobs"] = tobs
+        tobs_list.append(tobs_dict)
+    
+    return jsonify(tobs_list)
 
-@app.route("/api/v1.0/temp/<start>")
-@app.route("/api/v1.0/temp/<start>/<end>")
-def stats(start=None, end=None):
-    sel = [func.min(Measurement.tobs), func.avg(Measurement.tobs), func.max(Measurement.tobs)]
-
-    if not end:
-        results = session.query(*sel).\
+# Define the start and start-end range route
+@app.route("/api/v1.0/<start>")
+@app.route("/api/v1.0/<start>/<end>")
+def start_end(start, end=None):
+    if end:
+        results = session.query(func.min(Measurement.tobs), func.avg(Measurement.tobs), func.max(Measurement.tobs)).\
+            filter(Measurement.date >= start).filter(Measurement.date <= end).all()
+    else:
+        results = session.query(func.min(Measurement.tobs), func.avg(Measurement.tobs), func.max(Measurement.tobs)).\
             filter(Measurement.date >= start).all()
-        temps = list(np.ravel(results))
-        return jsonify(temps)
+        start_end_data = list(np.ravel(results))
+    
+    return jsonify(start_end_data)
 
-    results = session.query(*sel).\
-        filter(Measurement.date >= start).\
-        filter(Measurement.date <= end).all()
-    temps = list(np.ravel(results))
-    return jsonify(temps)
+if __name__ == "__main__":
+    app.run(debug=True)
