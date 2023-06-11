@@ -14,7 +14,7 @@ from flask import Flask, jsonify
 #################################################
 # Database Setup
 #################################################
-engine = create_engine("sqlite:///hawaii.sqlite")
+engine = create_engine ("sqlite:///Resources/hawaii.sqlite")
 
 
 # reflect an existing database into a new model
@@ -24,8 +24,8 @@ Base = automap_base()
 Base.prepare(engine, reflect=True)
 
 # Save references to each table
-Measurement = Base.classes.measurement
-Station = Base.classes.station
+Measurement=Base.classes.measurement
+Station=Base.classes.station
 
 # Create our session (link) from Python to the DB
 session = Session(engine)
@@ -43,14 +43,14 @@ app = Flask(__name__)
 @app.route("/")
 def welcome():
     return(
-    """
+    '''
     Welcome to the Climate Analysis API!
     Available Routes:
     /api/v1.0/precipitation
     /api/v1.0/stations
     /api/v1.0/tobs
     /api/v1.0/temp/start/end
-    """)
+    ''')
 @app.route("/api/v1.0/precipitation")
 def precipitation():
     prev_year = dt.date(2017, 8, 23) - dt.timedelta(days=365)
