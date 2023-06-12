@@ -26,6 +26,9 @@ ____
 * Design a query using the date and precipitation values to retrieve the last 12 months of precipitation data.   
 * Create a Pandas DataFrame to load the query results using the date column as the index.  
 * Sort by date and plot the results in a bar chart.
+
+#### precipitation plot
+![Alt text](prcp.png)
    
 |  | Precipitation|
 |----------|----------|
